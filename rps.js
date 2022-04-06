@@ -24,22 +24,25 @@ class Key {
 }
 
 class Game {
-  constructor (numberItems) {
-    this.numberItems = numberItems;
+  constructor (items) {
+    this.items = items;
   }
   computerMove() {
-    this.computer = Math.floor(Math.random() * this.numberItems.length);
+    this.computer = Math.floor(Math.random() * this.items.length)+1;
+    console.log('comp move: '+this.computer)
     return this.computer;
   }
   set userMove(move) {
     this.user = move;
   }
   get checkWin(){
-    return Math.abs( (this.computer - this.user)<= Math.trunc(this.numberItems/2))
+    const halfItems = Math.trunc(this.items.length/2);
+    const result = this.computer > this.user ? this.computer - this.user <= halfItems : this.user - this.computer <= halfItems;
+    return result;
   }
-  menu() {
+  getMenu() {
     console.log('Available moves:');
-    this.numberItems.forEach( (e,i) => {
+    this.items.forEach( (e,i) => {
       console.log(`${i+1} - ${e}`)
     });
     console.log('0 - exit');
@@ -48,13 +51,32 @@ class Game {
 }
 
 const game = new Game(process.argv.slice(2));
-const key = new Key(0,game.numberItems.length*100).toString();
+const key = new Key(0,game.items.length*100).toString();
 const hmac = new HMAC(key);
 
 const computerMove = game.computerMove();
 const computerMoveHash = hmac.getHash(computerMove.toString());
 console.log('HMAC: '+ computerMoveHash);
-game.menu()
+game.getMenu();
+
+let validUserMove = false;
+
+while (!validUserMove ) {
+  const userMove = prompt('Enter your move: ');
+  if (userMove <= game.items.length || userMove === '?') {
+    game.userMove = userMove;
+    validUserMove = !validUserMove;
+  }
+  else {
+    console.log('Invalid move. Try again');
+    game.getMenu();
+  }
+}
+
+console.log('Your move: '+game.items[game.user-1]);
+console.log('Computer move: '+game.items[game.computer-1]);
+
+console.log(game.checkWin)
 
 
 // if (inputItem.length % 2 === 0)
