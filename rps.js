@@ -2,6 +2,7 @@ const randomNumber = require("random-number-csprng");
 const {SHA256} = require("sha2");
 const prompt = require('prompt-sync')();
 const { createHmac } = require('crypto');
+const {table} = require('table');
 
 class HMAC {
   constructor (key) {
@@ -15,11 +16,14 @@ class HMAC {
 
 class Key {
   constructor (min,max) {
-    const value = this.__getKey(min,max);
-    this.value = SHA256(value.toString(),'hex').toString('hex');
+    const value = this.__generateKey(min,max);
+    this.__value = SHA256(value.toString(),'hex').toString('hex');
   }
-  async __getKey (min,max){
+  async __generateKey (min,max){
     return await randomNumber(min,max);
+  }
+  get value(){
+    return this.__value;
   }
 }
 
@@ -32,15 +36,14 @@ class Game {
     console.log('comp move: '+this.computer)
     return this.computer;
   }
-  set userMove(move) {
-    this.user = move;
+  checkUserWin(user){
+    const itemsLength = this.items.length
+    const halfItemsLength = Math.trunc(itemsLength/2);
+    const result = user > this.computer ? (this.computer + halfItemsLength) >= user :
+      (this.computer + halfItemsLength)%itemsLength >= user;
+    return this.computer === user ? 'Draw' : result ? 'You win' : 'You lose';
   }
-  get checkWin(){
-    const halfItems = Math.trunc(this.items.length/2);
-    const result = this.computer > this.user ? this.computer - this.user <= halfItems : this.user - this.computer <= halfItems;
-    return result;
-  }
-  getMenu() {
+  printMenu() {
     console.log('Available moves:');
     this.items.forEach( (e,i) => {
       console.log(`${i+1} - ${e}`)
@@ -50,68 +53,57 @@ class Game {
   }
 }
 
+class Helper {
+  moveTable(data) {
+    return table(data);
+  }
+}
+
+function rps() {
+
 const game = new Game(process.argv.slice(2));
-const key = new Key(0,game.items.length*100).toString();
-const hmac = new HMAC(key);
+const key = new Key(0,game.items.length*100);
+const hmac = new HMAC(key.value);
+const helper = new Helper();
 
 const computerMove = game.computerMove();
-const computerMoveHash = hmac.getHash(computerMove.toString());
+const computerMoveHash = hmac.getHash(game.items[computerMove-1]);
 console.log('HMAC: '+ computerMoveHash);
-game.getMenu();
+game.printMenu();
 
+let userMove;
 let validUserMove = false;
-
 while (!validUserMove ) {
-  const userMove = prompt('Enter your move: ');
+  userMove = prompt('Enter your move: ');
   if (userMove <= game.items.length || userMove === '?') {
     game.userMove = userMove;
     validUserMove = !validUserMove;
   }
   else {
     console.log('Invalid move. Try again');
-    game.getMenu();
+    game.printMenu();
   }
 }
+switch(userMove){
+  case '0':
+    return;
+  case '?':
+    const results = game.items.map( (e,i) => game.checkUserWin(i+1));
+    const data = [
+      ['Move'].concat(game.items),
+      ['Result'].concat(results)
+    ]
+    console.log(helper.moveTable(data));
+    break;
+}
 
-console.log('Your move: '+game.items[game.user-1]);
+console.log('Your move: '+game.items[userMove-1]);
 console.log('Computer move: '+game.items[game.computer-1]);
-
-console.log(game.checkWin)
-
-
-// if (inputItem.length % 2 === 0)
-//   console.log('Invalid count of items. You should enter odd number >=3 not repeats strings');
-
-// const halfArr = Math.trunc( inputItem.length / 2 );
-
-// const key = getHash(getKey(1,100));
-// // const step_1 = machineStep(inputItem.length);
-// const step_1 = 0;
-// const stpe_1_hash = getHash(step_1);
-
-
-// // readline.question('Enter your move:', value => {
-// //   if (value > inputItem.length)
-// //     console.log('Invalit value. Try new game');
-// //   else {
-// //     console.log(`Your move: ${inputItem[--value]}`);
-// //     readline.close();
-// //   }
-// // });
-
-// let validMove = false;
-// let value;
-// while (!validMove){
-//   value = prompt('Enter your move: ');
-//   if (value < inputItem.length || value === '?')
-//     validMove = !validMove;
-//   else 
-//     console.log('Invalid move. Try again')
-// }
-// console.log(`Your move: ${inputItem[value-1]}`);
-// console.log(`Computer move: ${inputItem[step_1]}`);
-
-// console.log(`You ${checkWin(step_1,value-1,halfArr)?'win':'lose'}`)
+console.log(game.checkUserWin(userMove));
+console.log('HMAC key: '+key.value);
 
 
 
+}
+
+rps();
