@@ -1,8 +1,8 @@
 const {table} = require('table');
 
 class Helper {
-  moveTable(data) {
-    return table(data);
+  drawTable(data,config) {
+    return table(data,config);
   }
 }
 

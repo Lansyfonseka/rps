@@ -1,109 +1,51 @@
-// const randomNumber = require("random-number-csprng");
-// const {SHA256} = require("sha2");
 const prompt = require('prompt-sync')();
-// const { createHmac } = require('crypto');
-// const {table} = require('table');
 const HMAC = require('./components/hmac');
 const Game = require('./components/game');
 const Key = require('./components/key');
 const Helper = require('./components/helper');
 
-// class HMAC {
-//   constructor (key) {
-//     this.key = key;
-//     this.__hmacDecode = createHmac('sha256',this.key);
-//   }
-//   getHash(value) {
-//     return this.__hmacDecode.update(value).digest('hex')
-//   }
-// }
-
-// class Key {
-//   constructor (min,max) {
-//     const value = this.__generateKey(min,max);
-//     this.__value = SHA256(value.toString(),'hex').toString('hex');
-//   }
-//   async __generateKey (min,max){
-//     return await randomNumber(min,max);
-//   }
-//   get value(){
-//     return this.__value;
-//   }
-// }
-
-// class Game {
-//   constructor (items) {
-//     this.items = items;
-//   }
-//   computerMove() {
-//     this.computer = Math.floor(Math.random() * this.items.length)+1;
-//     console.log('comp move: '+this.computer)
-//     return this.computer;
-//   }
-//   checkUserWin(user){
-//     const itemsLength = this.items.length
-//     const halfItemsLength = Math.trunc(itemsLength/2);
-//     const result = user > this.computer ? (this.computer + halfItemsLength) >= user :
-//       (this.computer + halfItemsLength)%itemsLength >= user;
-//     return this.computer === user ? 'Draw' : result ? 'You win' : 'You lose';
-//   }
-//   printMenu() {
-//     console.log('Available moves:');
-//     this.items.forEach( (e,i) => {
-//       console.log(`${i+1} - ${e}`)
-//     });
-//     console.log('0 - exit');
-//     console.log('? - help');
-//   }
-// }
-
-// class Helper {
-//   moveTable(data) {
-//     return table(data);
-//   }
-// }
-
 async function rps() {
-  const game = new Game(process.argv.slice(2));
-  const key = new Key(0,game.items.length*100);
-  const hmac = new HMAC(key.value);
-  const helper = new Helper();
+  try {
+    const game = new Game(process.argv.slice(2));
+    const key = new Key(0,game.items.length*100);
+    const hmac = new HMAC(key.value);
+    const helper = new Helper();
 
-  const computerMove = await game.computerMove;
-  const computerMoveHash = hmac.getHash(game.items[computerMove-1]);
-  console.log('HMAC: '+ computerMoveHash);
-  game.printMenu();
+    const computerMove = await game.computerMove;
+    const computerMoveHash = hmac.getHash(game.items[computerMove-1]);
+    console.log('HMAC: '+ computerMoveHash);
+    game.printMenu();
 
-  let userMove;
-  let validUserMove = false;
-  while (!validUserMove ) {
-    userMove = prompt('Enter your move: ');
-    if (userMove <= game.items.length || userMove === '?') {
-      game.userMove = userMove;
-      validUserMove = !validUserMove;
+    let userMove;
+    let isValidUserMove = false;
+    const validValues = new RegExp(`[0-${game.items.length},?]`);
+    while (!isValidUserMove ) {
+      userMove = prompt('Enter your move: ');
+      validValues.test(userMove) ? isValidUserMove = !isValidUserMove : game.printMenu();
+      if (userMove === '?') {
+        const results = game.answers;
+        const data = [
+          ['Move'].concat(game.items),
+          ['Result'].concat(results)
+        ];
+        const config = {
+          columns: [{alignment: 'left'}].concat(game.items.fill({alignment:'center'}))
+        }
+        console.log(helper.drawTable(data,config));
+        isValidUserMove = !isValidUserMove;
+      }
     }
-    else {
-      console.log('Invalid move. Try again');
-      game.printMenu();
-    }
-  }
-  switch(userMove){
-    case '0':
-      return;
-    case '?':
-      const results = game.items.map( (e,i) => game.checkUserWin(i+1));
-      const data = [
-        ['Move'].concat(game.items),
-        ['Result'].concat(results)
-      ];
-      console.log(helper.moveTable(data));
-      break;
-  }
 
-  console.log('Your move: '+game.items[userMove-1]);
-  console.log('Computer move: '+game.items[game.computer-1]);
-  console.log(game.checkUserWin(userMove));
-  console.log('HMAC key: '+key.value);
+    if (userMove == 0) throw 'Game is over :(';
+
+    console.log('Your move: '+game.items[userMove-1]);
+    console.log('Computer move: '+game.items[computerMove-1]);
+    console.log(game.checkUserWin(userMove));
+    console.log('HMAC key: '+key.value);
+  }
+  catch(error){
+    console.log(error)
+  }
 }
 
 rps();

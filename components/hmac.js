@@ -1,12 +1,13 @@
 const { createHmac } = require('crypto');
 
 class HMAC {
+  #hmacencode
   constructor (key) {
     this.key = key;
-    this.__hmacDecode = createHmac('sha256',this.key);
+    this.#hmacencode = createHmac('sha256',this.key);
   }
   getHash(value) {
-    return this.__hmacDecode.update(value).digest('hex')
+    return this.#hmacencode.update(value).digest('hex')
   }
 }
 
