@@ -14,9 +14,9 @@ class Game {
   }
   get computerMove() {
     if (!this.#computerMove)
-      this.#computerMove = random.int(1,this.items.length+1);  
+      this.#computerMove = random.int(1,this.items.length);  
 
-    console.log('comp move: '+this.#computerMove);
+    console.log('Computer move: '+this.#computerMove);
     return this.#computerMove;
   }
   checkUserWin(userMove){
